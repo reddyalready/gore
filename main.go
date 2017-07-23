@@ -46,8 +46,10 @@ func runner(cmdArgs []string) (chan<- string, error) {
 			reloadMessage := <-runnerIO
 
 			if reloadMessage == "restart" {
+				if err := proc.Kill(); err != nil {
+					log.Printf("Kill failed: %s", err)
+				}
 				log.Printf("Restarting process %s", cmdArgs)
-				proc.Kill()
 				proc = run(cmdArgs)
 			}
 		}
@@ -63,13 +65,9 @@ func run(cmdArgs []string) *os.Process {
 	}
 
 	cmd := exec.Command(programPath, cmdArgs[1:]...)
-	output, err := cmd.CombinedOutput()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Println(string(output))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Run()
 
 	return cmd.Process
 }
