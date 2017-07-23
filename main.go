@@ -7,64 +7,75 @@ import (
 
 	"os/exec"
 
+	"os"
+
+	"errors"
+
 	"github.com/fsnotify/fsnotify"
 )
 
 func main() {
 
-	heffe := runner([]string{"ls", "-la"})
+	filesChanged := fsWatch()
+	heffe, err := runner(os.Args[1:])
 
-	filesChanged := watch()
-
-	log.Println("Telling runner to start")
-	heffe <- "restart"
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	for {
-		log.Println("Main waiting")
-		select {
-		case <-filesChanged:
-			log.Println("File change detected, telling runner to restart")
+		if <-filesChanged {
 			heffe <- "restart"
-		case output := <-heffe:
-			log.Println("Program ended - printing output")
-			log.Println(output)
-			break
 		}
 	}
 }
 
-func runner(cmdArgs []string) chan string {
+func runner(cmdArgs []string) (chan<- string, error) {
 
-	runnerio := make(chan string)
+	if len(cmdArgs) < 1 {
+		return nil, errors.New("runner: no arguments passed")
+	}
+
+	runnerIO := make(chan string)
 
 	go func() {
+		log.Printf("Starting process %s", cmdArgs)
+		proc := run(cmdArgs)
+
 		for {
-			reloadMessage := <-runnerio
+			reloadMessage := <-runnerIO
 
 			if reloadMessage == "restart" {
-				fullPath, err := exec.LookPath(cmdArgs[0])
-
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				cmd := exec.Command(fullPath, cmdArgs[1:]...)
-				output, err := cmd.CombinedOutput()
-
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				runnerio <- string(output)
+				log.Printf("Restarting process %s", cmdArgs)
+				proc.Kill()
+				proc = run(cmdArgs)
 			}
 		}
 	}()
 
-	return runnerio
+	return runnerIO, nil
 }
 
-func watch() <-chan bool {
-	log.Println("Watch routine starting new file watcher")
+func run(cmdArgs []string) *os.Process {
+	programPath, err := exec.LookPath(cmdArgs[0])
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	cmd := exec.Command(programPath, cmdArgs[1:]...)
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println(string(output))
+
+	return cmd.Process
+}
+
+func fsWatch() <-chan bool {
+	log.Println("Starting filesystem watch on current directory")
 
 	watchChannel := make(chan bool)
 
@@ -88,7 +99,7 @@ func watch() <-chan bool {
 				changedFile := event.Name
 				if strings.HasSuffix(changedFile, ".go") {
 					log.Printf("File change detected: %s", changedFile)
-					close(watchChannel)
+					watchChannel <- true
 				}
 			case err := <-watcher.Errors:
 				log.Println("error:", err)
