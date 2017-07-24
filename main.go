@@ -17,7 +17,7 @@ import (
 func main() {
 
 	filesChanged := fsWatch()
-	heffe, err := runner(os.Args[1:])
+	jefe, err := runner(os.Args[1:]) //which is espanol for boss
 
 	if err != nil {
 		log.Fatal(err)
@@ -25,7 +25,7 @@ func main() {
 
 	for {
 		if <-filesChanged {
-			heffe <- "restart"
+			jefe <- "restart"
 		}
 	}
 }
@@ -67,7 +67,7 @@ func run(cmdArgs []string) *os.Process {
 	cmd := exec.Command(programPath, cmdArgs[1:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Run()
+	cmd.Start()
 
 	return cmd.Process
 }
