@@ -7,16 +7,6 @@ Simple golang command line utility that, using goroutines:
 
 ## Installing
 
-Get the source:
-
-`git clone https://github.com/reddyalready/gore.git`
-
-Get dependencies (you must have `dep` - Go's dependency manager)
-
-`dep ensure`
-
-Install gore
-
 `go build`
 
 ## Running
