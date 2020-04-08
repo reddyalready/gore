@@ -1,5 +1,7 @@
 # gore
 
+***DEPRECATED - This repo is not being actively supported.***
+
 Simple golang command line utility that, using goroutines:
 
  * Watches the current directory for file system changes; and
